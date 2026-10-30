@@ -237,12 +237,32 @@ st.caption(
     "Forecasts are estimates, not guarantees."
 )
 
+
 # Historical unemployment graph
 st.subheader("Canadian Unemployment History")
 
-history = unemployment.set_index("REF_DATE")["VALUE"]
+history = unemployment.copy()
 
-st.line_chart(history)
+# Ensure dates are interpreted correctly
+history["REF_DATE"] = pd.to_datetime(
+    history["REF_DATE"],
+    errors="coerce"
+)
+
+history = history.dropna(subset=["REF_DATE", "VALUE"])
+history = history.sort_values("REF_DATE")
+
+# Display recent historical data
+history = history.tail(120)
+
+st.line_chart(
+    history,
+    x="REF_DATE",
+    y="VALUE",
+    x_label="Date",
+    y_label="Unemployment Rate (%)"
+)
+
 
 
 # Improved six-month forecast visualization
