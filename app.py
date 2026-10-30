@@ -245,7 +245,7 @@ history_chart = (
         ]
     )
     .properties(height=350)
-    .interactive()
+    
 )
 
 st.altair_chart(history_chart, use_container_width=True)
