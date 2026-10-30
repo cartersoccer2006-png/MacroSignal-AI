@@ -4,6 +4,7 @@ import pandas as pd
 import altair as alt
 import requests
 import zipfile
+import textwrap
 from io import BytesIO
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
@@ -15,65 +16,25 @@ st.set_page_config(
 )
 
 
-# MACROSIGNAL AI — PROFESSIONAL DASHBOARD DESIGN
-
-st.markdown("""
-<style>
-
-/* Main dashboard background */
-.stApp {
-    background-color: #0B1120;
-    color: #F8FAFC;
-}
-
-/* Main page spacing */
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 3rem;
-    max-width: 1350px;
-}
-
-/* Headings */
-h1, h2, h3 {
-    color: #F8FAFC !important;
-    font-family: Arial, sans-serif;
-}
-
-/* Metric cards */
-[data-testid="stMetric"] {
-    background-color: #151F32;
-    border: 1px solid #26364D;
-    border-radius: 12px;
-    padding: 20px;
-}
-
-/* Metric numbers */
-[data-testid="stMetricValue"] {
-    color: #60A5FA;
-    font-weight: 700;
-}
-
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background-color: #111827;
-}
-
-/* Dividers */
-hr {
-    border-color: #26364D;
-}
-
-</style>
-""", unsafe_allow_html=True)
 
 
-st.title("📈 MacroSignal AI")
-st.subheader("Canadian Economic Forecasting Platform")
 
-st.write(
-    "Using machine learning to forecast Canada's "
-    "unemployment rate six months into the future."
+
+
+
+
+
+st.markdown(
+    '<div style="background:#080A0D; border:1px solid #343B44; border-left:5px solid #FF9F1C; padding:26px; border-radius:8px;">'
+    '<p style="color:#FF9F1C; font-size:13px; letter-spacing:2px;">MACROECONOMIC INTELLIGENCE / CANADA</p>'
+    '<h1 style="color:white; font-size:42px; margin:5px 0;">MACROSIGNAL <span style="color:#FF9F1C;">AI</span></h1>'
+    '<p style="color:#B5C0CD; font-size:15px;">CANADIAN LABOUR MARKET INTELLIGENCE | SIX-MONTH UNEMPLOYMENT FORECAST</p>'
+    '<hr style="border:0; border-top:1px solid #343B44;">'
+    '<p style="color:#8B9BAD; font-size:12px;">DATA SOURCE: STATISTICS CANADA | MODEL: RANDOM FOREST | STATUS: EXPERIMENTAL</p>'
+    '</div>',
+    unsafe_allow_html=True
 )
+
 
 # Download and prepare official economic data
 
@@ -212,26 +173,41 @@ forecast_date = latest_date + pd.DateOffset(months=6)
 
 st.divider()
 
-# Dashboard metrics
-col1, col2, col3 = st.columns(3)
+
+# BLOOMBERG-STYLE FORECAST METRICS
+
+col1, col2, col3 = st.columns(3, gap="medium")
 
 with col1:
-    st.metric(
-        "Latest Unemployment Rate",
-        f"{current_rate:.1f}%"
+    st.markdown(
+        f'<div style="background:#0A0D13; border:1px solid #343B44; border-top:3px solid #FF9F1C; padding:24px; border-radius:6px; min-height:155px;">'
+        f'<div style="color:#FF9F1C; font-size:12px; font-weight:bold; letter-spacing:1px;">CURRENT UNEMPLOYMENT</div>'
+        f'<div style="color:#FFFFFF; font-size:38px; font-weight:bold; margin-top:16px;">{current_rate:.1f}%</div>'
+        f'<div style="color:#8B9BAD; font-size:12px; margin-top:10px;">LATEST OBSERVED RATE</div>'
+        f'</div>',
+        unsafe_allow_html=True
     )
 
 with col2:
-    st.metric(
-        "AI Six-Month Forecast",
-        f"{forecast:.2f}%"
+    st.markdown(
+        f'<div style="background:#0A0D13; border:1px solid #343B44; border-top:3px solid #22C55E; padding:24px; border-radius:6px; min-height:155px;">'
+        f'<div style="color:#22C55E; font-size:12px; font-weight:bold; letter-spacing:1px;">AI SIX-MONTH FORECAST</div>'
+        f'<div style="color:#FFFFFF; font-size:38px; font-weight:bold; margin-top:16px;">{forecast:.2f}%</div>'
+        f'<div style="color:#8B9BAD; font-size:12px; margin-top:10px;">EXPERIMENTAL ESTIMATE</div>'
+        f'</div>',
+        unsafe_allow_html=True
     )
 
 with col3:
-    st.metric(
-        "Forecast Target",
-        forecast_date.strftime("%B %Y")
+    st.markdown(
+        f'<div style="background:#0A0D13; border:1px solid #343B44; border-top:3px solid #60A5FA; padding:24px; border-radius:6px; min-height:155px;">'
+        f'<div style="color:#60A5FA; font-size:12px; font-weight:bold; letter-spacing:1px;">FORECAST TARGET</div>'
+        f'<div style="color:#FFFFFF; font-size:30px; font-weight:bold; margin-top:20px;">{forecast_date:%b %Y}</div>'
+        f'<div style="color:#8B9BAD; font-size:12px; margin-top:10px;">SIX MONTHS AHEAD</div>'
+        f'</div>',
+        unsafe_allow_html=True
     )
+
 
 st.caption(
     f"Latest observation: {latest_date:%B %Y}. "
@@ -251,7 +227,7 @@ history = history.sort_values("REF_DATE").tail(120)
 
 history_chart = (
     alt.Chart(history)
-    .mark_line(color="#60A5FA", strokeWidth=2)
+    .mark_line(color="#FF9F1C", strokeWidth=2)
     .encode(
         x=alt.X(
             "REF_DATE:T",
@@ -325,7 +301,7 @@ forecast_chart = (
             "Series:N",
             scale=alt.Scale(
                 domain=["Historical", "AI Forecast"],
-                range=["#60A5FA", "#F59E0B"]
+                range=["#FF9F1C", "#22C55E"]
             ),
             legend=alt.Legend(title="")
         ),
@@ -341,8 +317,8 @@ forecast_chart = (
 st.altair_chart(forecast_chart, use_container_width=True)
 
 st.caption(
-    "The blue line shows the latest 12 months of observed unemployment. "
-    "The orange line connects the latest observation to the six-month "
+    "The amber line shows the latest 12 months of observed unemployment. "
+    "The green line connects the latest observation to the six-month "
     "AI forecast; it does not represent individual monthly predictions. "
     "The vertical scale is zoomed in for readability."
 )
@@ -419,7 +395,7 @@ backtest_chart = (
                     "AI Prediction",
                     "Baseline Prediction"
                 ],
-                range=["#22C55E", "#60A5FA", "#F59E0B"]
+                range=["#FF9F1C", "#22C55E", "#60A5FA"]
             )
         ),
         tooltip=[
