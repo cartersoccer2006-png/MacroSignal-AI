@@ -244,18 +244,42 @@ history = unemployment.set_index("REF_DATE")["VALUE"]
 
 st.line_chart(history)
 
-# Forecast visualization
+
+# Improved six-month forecast visualization
 st.subheader("Six-Month AI Forecast")
 
-chart_data = pd.DataFrame(
-    {
-        "Historical": [current_rate, None],
-        "AI Forecast": [current_rate, forecast]
-    },
-    index=[latest_date, forecast_date]
+# Get the latest 12 months of unemployment data
+recent = unemployment.tail(12).copy()
+
+# Create historical chart data
+chart_data = recent.set_index("REF_DATE")[["VALUE"]]
+chart_data.columns = ["Historical"]
+
+# Add a separate AI forecast column
+chart_data["AI Forecast"] = float("nan")
+
+# Connect the forecast to the latest observation
+chart_data.loc[latest_date, "AI Forecast"] = current_rate
+
+# Add the six-month-ahead forecast
+chart_data.loc[forecast_date, "AI Forecast"] = forecast
+
+# Sort observations chronologically
+chart_data = chart_data.sort_index()
+
+# Display the updated graph
+st.line_chart(
+    chart_data,
+    color=["#60A5FA", "#F59E0B"]
 )
 
-st.line_chart(chart_data)
+st.caption(
+    "Historical unemployment rates and a six-month "
+    "AI forecast. The orange line connects the current "
+    "rate to the forecast; it does not represent "
+    "monthly predictions."
+)
+
 
 
 # Compare historical AI predictions with actual outcomes
