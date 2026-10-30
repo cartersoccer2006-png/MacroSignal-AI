@@ -5,3 +5,4 @@ requests
 numpy
 scikit-learn
 matplotlib
+altair
