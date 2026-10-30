@@ -1,6 +1,7 @@
 
 import streamlit as st
 import pandas as pd
+import altair as alt
 import requests
 import zipfile
 from io import BytesIO
@@ -238,72 +239,119 @@ st.caption(
 )
 
 
-# Historical unemployment graph
+
+# HISTORICAL UNEMPLOYMENT GRAPH
+
 st.subheader("Canadian Unemployment History")
 
 history = unemployment.copy()
-
-# Ensure dates are interpreted correctly
-history["REF_DATE"] = pd.to_datetime(
-    history["REF_DATE"],
-    errors="coerce"
-)
-
+history["REF_DATE"] = pd.to_datetime(history["REF_DATE"])
 history = history.dropna(subset=["REF_DATE", "VALUE"])
-history = history.sort_values("REF_DATE")
+history = history.sort_values("REF_DATE").tail(120)
 
-# Display recent historical data
-history = history.tail(120)
-
-st.line_chart(
-    history,
-    x="REF_DATE",
-    y="VALUE",
-    x_label="Date",
-    y_label="Unemployment Rate (%)"
+history_chart = (
+    alt.Chart(history)
+    .mark_line(color="#60A5FA", strokeWidth=2)
+    .encode(
+        x=alt.X(
+            "REF_DATE:T",
+            title="Date",
+            axis=alt.Axis(format="%b %Y", labelAngle=-35, tickCount=8)
+        ),
+        y=alt.Y(
+            "VALUE:Q",
+            title="Unemployment Rate (%)",
+            scale=alt.Scale(zero=False)
+        ),
+        tooltip=[
+            alt.Tooltip("REF_DATE:T", title="Month", format="%B %Y"),
+            alt.Tooltip("VALUE:Q", title="Unemployment Rate", format=".2f")
+        ]
+    )
+    .properties(height=350)
+    .interactive()
 )
 
+st.altair_chart(history_chart, use_container_width=True)
 
 
-# Improved six-month forecast visualization
+# SIX-MONTH AI FORECAST GRAPH
+
 st.subheader("Six-Month AI Forecast")
 
-# Get the latest 12 months of unemployment data
 recent = unemployment.tail(12).copy()
 
-# Create historical chart data
 chart_data = recent.set_index("REF_DATE")[["VALUE"]]
 chart_data.columns = ["Historical"]
-
-# Add a separate AI forecast column
 chart_data["AI Forecast"] = float("nan")
 
-# Connect the forecast to the latest observation
+# Connect the forecast to the latest known rate
 chart_data.loc[latest_date, "AI Forecast"] = current_rate
-
-# Add the six-month-ahead forecast
 chart_data.loc[forecast_date, "AI Forecast"] = forecast
 
-# Sort observations chronologically
-chart_data = chart_data.sort_index()
+chart_data = chart_data.sort_index().reset_index()
+chart_data = chart_data.rename(columns={"REF_DATE": "Date"})
 
-# Display the updated graph
-st.line_chart(
-    chart_data,
-    color=["#60A5FA", "#F59E0B"]
+# Convert columns to the format Altair expects
+forecast_plot = chart_data.melt(
+    id_vars="Date",
+    value_vars=["Historical", "AI Forecast"],
+    var_name="Series",
+    value_name="Rate"
+).dropna(subset=["Rate"])
+
+# Set a sensible, non-negative vertical range
+minimum_rate = min(recent["VALUE"].min(), current_rate, forecast)
+maximum_rate = max(recent["VALUE"].max(), current_rate, forecast)
+
+y_min = max(0, float(minimum_rate) - 0.5)
+y_max = float(maximum_rate) + 0.5
+
+forecast_chart = (
+    alt.Chart(forecast_plot)
+    .mark_line(strokeWidth=3, point=True)
+    .encode(
+        x=alt.X(
+            "Date:T",
+            title="Date",
+            axis=alt.Axis(format="%b %Y", labelAngle=-35, tickCount=6)
+        ),
+        y=alt.Y(
+            "Rate:Q",
+            title="Unemployment Rate (%)",
+            scale=alt.Scale(domain=[y_min, y_max])
+        ),
+        color=alt.Color(
+            "Series:N",
+            scale=alt.Scale(
+                domain=["Historical", "AI Forecast"],
+                range=["#60A5FA", "#F59E0B"]
+            ),
+            legend=alt.Legend(title="")
+        ),
+        tooltip=[
+            alt.Tooltip("Date:T", title="Date", format="%B %Y"),
+            alt.Tooltip("Series:N", title="Series"),
+            alt.Tooltip("Rate:Q", title="Rate (%)", format=".2f")
+        ]
+    )
+    .properties(height=400)
 )
+
+st.altair_chart(forecast_chart, use_container_width=True)
 
 st.caption(
-    "Historical unemployment rates and a six-month "
-    "AI forecast. The orange line connects the current "
-    "rate to the forecast; it does not represent "
-    "monthly predictions."
+    "The blue line shows the latest 12 months of observed unemployment. "
+    "The orange line connects the latest observation to the six-month "
+    "AI forecast; it does not represent individual monthly predictions. "
+    "The vertical scale is zoomed in for readability."
 )
+
 
 
 
 # Compare historical AI predictions with actual outcomes
-st.subheader("AI Predictions vs Actual Unemployment")
+st.subheader("Historical Backtesting: AI vs Baseline vs Actual")
 
 # Allow users to change how much history is displayed
 months_to_show = st.slider(
@@ -330,17 +378,60 @@ comparison = pd.DataFrame({
 # Select the most recent test observations
 comparison = comparison.tail(months_to_show)
 
-# Display interactive chart
-st.line_chart(
-    comparison,
-    x="Date",
-    y=[
+# Display historical comparison with clearer axes
+
+comparison_plot = comparison.melt(
+    id_vars="Date",
+    value_vars=[
         "Actual Unemployment",
         "AI Prediction",
         "Baseline Prediction"
     ],
-    color=["#22C55E", "#60A5FA", "#F59E0B"]
+    var_name="Series",
+    value_name="Rate"
 )
+
+backtest_chart = (
+    alt.Chart(comparison_plot)
+    .mark_line(strokeWidth=2)
+    .encode(
+        x=alt.X(
+            "Date:T",
+            title="Forecast Target Month",
+            scale=alt.Scale(
+                domain=[
+                    comparison["Date"].min().isoformat(),
+                    comparison["Date"].max().isoformat()
+                ]
+            ),
+            axis=alt.Axis(format="%b %Y", labelAngle=-35, tickCount=6)
+        ),
+        y=alt.Y(
+            "Rate:Q",
+            title="Unemployment Rate (%)",
+            scale=alt.Scale(zero=False)
+        ),
+        color=alt.Color(
+            "Series:N",
+            scale=alt.Scale(
+                domain=[
+                    "Actual Unemployment",
+                    "AI Prediction",
+                    "Baseline Prediction"
+                ],
+                range=["#22C55E", "#60A5FA", "#F59E0B"]
+            )
+        ),
+        tooltip=[
+            alt.Tooltip("Date:T", title="Month", format="%B %Y"),
+            alt.Tooltip("Series:N", title="Series"),
+            alt.Tooltip("Rate:Q", title="Rate (%)", format=".2f")
+        ]
+    )
+    .properties(height=400)
+)
+
+st.altair_chart(backtest_chart, use_container_width=True)
 
 st.caption(
     "Historical six-month-ahead forecasts compared "
